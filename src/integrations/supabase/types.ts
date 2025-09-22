@@ -27,6 +27,7 @@ export type Database = {
           payment_status: string
           monthly_price: number | null
           renewal_status: string
+          notes: string | null
           created_at: string
           updated_at: string
         }
@@ -42,6 +43,7 @@ export type Database = {
           payment_status?: string
           monthly_price?: number | null
           renewal_status?: string
+          notes?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -57,6 +59,7 @@ export type Database = {
           payment_status?: string
           monthly_price?: number | null
           renewal_status?: string
+          notes?: string | null
           created_at?: string
           updated_at?: string
         }
