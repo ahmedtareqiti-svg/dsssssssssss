@@ -20,6 +20,7 @@ interface Customer {
   payment_status: string;
   monthly_price: number | null;
   renewal_status: string;
+  notes?: string | null;
 }
 
 interface CustomerFormProps {
@@ -40,6 +41,7 @@ export const CustomerForm = ({ customer, onSave, onCancel }: CustomerFormProps) 
     payment_status: customer?.payment_status || 'لم يدفع',
     monthly_price: customer?.monthly_price ? String(customer.monthly_price) : '',
     renewal_status: customer?.renewal_status || 'لم يتم',
+    notes: customer?.notes || '',
   });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -60,6 +62,7 @@ export const CustomerForm = ({ customer, onSave, onCancel }: CustomerFormProps) 
         payment_status: formData.payment_status,
         monthly_price: formData.monthly_price ? parseFloat(formData.monthly_price) : null,
         renewal_status: formData.renewal_status,
+        notes: formData.notes || null,
       };
 
       console.log('Data to save:', dataToSave); // للتأكد من البيانات
@@ -255,6 +258,20 @@ export const CustomerForm = ({ customer, onSave, onCancel }: CustomerFormProps) 
                     <SelectItem value="لم يتم">لم يتم التجديد</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="notes">ملاحظات (للمدير فقط)</Label>
+                <Textarea
+                  id="notes"
+                  value={formData.notes || ''}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    notes: e.target.value 
+                  })}
+                  placeholder="اكتب أي ملاحظات خاصة بالعميل..."
+                  className="text-right min-h-[80px]"
+                />
               </div>
             </div>
 

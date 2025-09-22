@@ -3,8 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Phone, Calendar, DollarSign, UserPlus } from "lucide-react";
+import { Plus, Edit, Trash2, Phone, Calendar, DollarSign, UserPlus, StickyNote } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface Customer {
   id: number;
@@ -19,6 +22,7 @@ interface Customer {
   payment_status: string;
   monthly_price: number | null;
   renewal_status: string;
+  notes: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -32,6 +36,8 @@ interface CustomerTableProps {
 export const CustomerTable = ({ onAddCustomer, onAddBulkCustomers, onEditCustomer }: CustomerTableProps) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingNote, setEditingNote] = useState<{ id: number; note: string } | null>(null);
+  const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -80,6 +86,36 @@ export const CustomerTable = ({ onAddCustomer, onAddBulkCustomers, onEditCustome
       toast({
         title: "خطأ",
         description: `فشل في حذف العميل: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const updateCustomerNote = async (customerId: number, note: string) => {
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .update({ notes: note })
+        .eq('id', customerId);
+
+      if (error) throw error;
+
+      setCustomers(customers.map(c => 
+        c.id === customerId ? { ...c, notes: note } : c
+      ));
+      
+      toast({
+        title: "تم بنجاح",
+        description: "تم حفظ الملاحظة بنجاح",
+      });
+      
+      setEditingNote(null);
+      setNoteDialogOpen(false);
+    } catch (error) {
+      console.error('Error updating note:', error);
+      toast({
+        title: "خطأ",
+        description: `فشل في حفظ الملاحظة: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -191,6 +227,7 @@ export const CustomerTable = ({ onAddCustomer, onAddBulkCustomers, onEditCustome
               <TableHead className="text-right">حالة الدفع</TableHead>
               <TableHead className="text-right">السعر الشهري</TableHead>
               <TableHead className="text-right">حالة التجديد</TableHead>
+              <TableHead className="text-right">ملاحظات</TableHead>
               <TableHead className="text-right">الإجراءات</TableHead>
             </TableRow>
           </TableHeader>
@@ -202,7 +239,14 @@ export const CustomerTable = ({ onAddCustomer, onAddBulkCustomers, onEditCustome
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
                 <TableCell className="font-medium">{index + 1}</TableCell>
-                <TableCell>{customer.customer_name || 'غير محدد'}</TableCell>
+                <TableCell>
+                  <div className="group relative">
+                    <div className="font-semibold text-lg bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent hover:from-green-600 hover:to-blue-600 transition-all duration-300 cursor-pointer transform hover:scale-105">
+                      {customer.customer_name || 'غير محدد'}
+                    </div>
+                    <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-600 to-green-600 group-hover:w-full transition-all duration-300"></div>
+                  </div>
+                </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <Phone className="h-4 w-4 text-muted-foreground" />
@@ -264,6 +308,57 @@ export const CustomerTable = ({ onAddCustomer, onAddBulkCustomers, onEditCustome
                   )}
                 </TableCell>
                 <TableCell>{getRenewalStatusBadge(customer.renewal_status)}</TableCell>
+                <TableCell>
+                  <Dialog open={noteDialogOpen && editingNote?.id === customer.id} onOpenChange={setNoteDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setEditingNote({ id: customer.id, note: customer.notes || '' });
+                          setNoteDialogOpen(true);
+                        }}
+                        className="flex items-center gap-2 hover:bg-blue-50 transition-colors"
+                      >
+                        <StickyNote className={`h-4 w-4 ${customer.notes ? 'text-blue-600' : 'text-gray-400'}`} />
+                        {customer.notes ? 'عرض' : 'إضافة'}
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>ملاحظة للعميل: {customer.customer_name}</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <Textarea
+                          value={editingNote?.note || ''}
+                          onChange={(e) => setEditingNote(prev => prev ? { ...prev, note: e.target.value } : null)}
+                          placeholder="اكتب ملاحظتك هنا..."
+                          className="min-h-[100px] text-right"
+                        />
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setEditingNote(null);
+                              setNoteDialogOpen(false);
+                            }}
+                          >
+                            إلغاء
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              if (editingNote) {
+                                updateCustomerNote(editingNote.id, editingNote.note);
+                              }
+                            }}
+                          >
+                            حفظ
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </TableCell>
                 <TableCell>
                   <div className="flex gap-2">
                     <Button

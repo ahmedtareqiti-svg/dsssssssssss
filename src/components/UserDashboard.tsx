@@ -18,6 +18,7 @@ interface Customer {
   payment_status: string;
   monthly_price: number | null;
   renewal_status: string;
+  notes?: string | null;
 }
 
 interface UserDashboardProps {
@@ -35,11 +36,17 @@ export const UserDashboard = ({ userType, username }: UserDashboardProps) => {
 
   const fetchCustomerData = async () => {
     try {
-      let query = supabase.from('customers').select('*');
+      let query = supabase.from('customers').select(`
+        id, customer_name, mobile_number, line_type, charging_date, 
+        renewal_date, arrival_time, provider, ownership, payment_status, 
+        monthly_price, renewal_status, created_at, updated_at
+      `);
       
       if (userType === "multiple") {
         // For multiple user, filter by customer name
-        query = query.eq('customer_name', username);
+        query = query.eq('customer_name', username)
+          .order('charging_date', { ascending: false })
+          .order('line_type', { ascending: true });
       } else if (userType === "single") {
         // For single user, filter by mobile number
         query = query.eq('mobile_number', parseInt(username));
